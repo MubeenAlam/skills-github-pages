@@ -1,0 +1,141 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Why the 555 Timer Can’t Generate Fixed-Frequency PWM in Simple Astable Mode</title>
+  <link rel="stylesheet" href="https://stackedit.io/style.css" />
+</head>
+
+<body class="stackedit">
+  <div class="stackedit__html"><h1 id="why-the-555-timer-can’t-generate-fixed-frequency-pwm-in-simple-a-stable-mode">Why the 555 Timer Can’t Generate Fixed-Frequency PWM in Simple A-stable Mode</h1>
+<h3 id="abstract">Abstract</h3>
+<p>The 555 timer is a widely used IC known for its simplicity and versatility, especially in generating square waves in a-stable mode. However, when used to create pulse-width modulation (PWM) by varying the control voltage, a key limitation emerges: the output frequency becomes dependent on the duty cycle. This blog explores a common 555 a-stable configuration with a diode for asymmetric charging/discharging paths and demonstrates why it cannot produce fixed-frequency PWM. We break down the timing equations, show how the discharge time remains constant while the charge time varies with control voltage, and quantify how frequency changes with duty cycle. Practical consequences and better alternatives for constant-frequency PWM are also discussed.</p>
+<h1 id="introduction">Introduction</h1>
+<p>The <strong>555 timer</strong> is a timeless integrated circuit, popular for creating oscillators, timers, and pulse generators. It’s simple, affordable, and incredibly versatile. That’s why, as a trainee engineer, whenever a project calls for generating digital pulse sequences, the first solution that often comes to mind is the 555 timer.</p>
+<p>But if you’re considering it for a PWM-based application, there’s something important you should know.</p>
+<p>When we first started working on an <strong>inverter</strong> project, our initial idea was to use the 555 timer as the oscillator to generate an <strong>SPWM</strong> (Sinusoidal Pulse Width Modulation) signal. It seemed like a natural choice—after all, the 555 is well-regarded for producing stable timing pulses, and we thought we could <strong>adjust the duty cycle</strong> dynamically using the <strong>control voltage pin</strong>( pin 5 ) of the 555 timer.</p>
+<p>However, as we dove into the timing equations and simulations, we encountered a limitation: changing the duty cycle also affected the output frequency. This behavior made the 555 timer <strong>unsuitable</strong> for our goal of producing a <strong>fixed-frequency, variable-duty-cycle PWM signal.</strong></p>
+<h2 id="the-classic-a-stable-setup-with-a-twist">1. The Classic A-stable Setup (with a Twist)</h2>
+<p>In a common 555 a-stable configuration, we add a <strong>diode</strong> in parallel with the charging resistor to <strong>separate charge and discharge paths</strong>.</p>
+<p>This lets the capacitor charge and discharge through different resistors — or even the same resistor with direction-sensitive behavior via a diode.</p>
+<p>To <strong>adjust duty cycle</strong>, we apply a voltage to the 555’s <strong>control pin</strong>. This voltage:</p>
+<ul>
+<li>Sets the <strong>upper threshold</strong> for capacitor charging</li>
+<li>Automatically defines the <strong>lower trigger</strong> at half the control voltage</li>
+</ul>
+<p>This means the capacitor:</p>
+<ul>
+<li>Charges from 0.5 × CV to CV</li>
+<li>Discharges from CV to 0.5 × CV</li>
+</ul>
+<hr>
+<h2 id="timing-equations">2. Timing Equations</h2>
+<p>Let’s assume:</p>
+<ul>
+<li>Supply voltage V_{cc} = 12V</li>
+<li>Control voltage ( V_{ctrl} ) (user-defined)</li>
+<li>Resistor ( R = 1k\Omega )</li>
+<li>Capacitor ( C = 10nF )</li>
+<li>Diode drop ( V_D = 0.7V )</li>
+</ul>
+<h3 id="charging-time">Charging Time:</h3>
+<p>[<br>
+t_{on} = RC \cdot \ln\left( \frac{V_{cc} - 0.5 \cdot V_{ctrl}}{V_{cc} - V_{ctrl}} \right)<br>
+]</p>
+<h3 id="discharging-time">Discharging Time:</h3>
+<p>[<br>
+t_{off} = RC \cdot \ln(2) \approx 0.693 \cdot RC<br>
+]</p>
+<p>Notice: <strong>Discharge time is constant</strong>, no matter what the control voltage is.</p>
+<hr>
+<h2 id="consequence-frequency-varies-with-duty-cycle">3. Consequence: Frequency Varies with Duty Cycle</h2>
+<p>Total period:</p>
+<p>[<br>
+T = t_{on} + t_{off}<br>
+\quad \Rightarrow \quad<br>
+f = \frac{1}{T}<br>
+]</p>
+<p>As you increase ( V_{ctrl} ), the <strong>charging time increases</strong>, which means:</p>
+<ul>
+<li><strong>Higher duty cycle</strong></li>
+<li><strong>Lower frequency</strong></li>
+</ul>
+<p>And vice versa.</p>
+<h3 id="example">Example:</h3>
+
+<table>
+<thead>
+<tr>
+<th>Control Voltage (V)</th>
+<th>On-Time (µs)</th>
+<th>Off-Time (µs)</th>
+<th>Frequency (kHz)</th>
+<th>Duty Cycle (%)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>6V</td>
+<td>6.0</td>
+<td>6.93</td>
+<td>73.5</td>
+<td>46.4</td>
+</tr>
+<tr>
+<td>8V</td>
+<td>7.94</td>
+<td>6.93</td>
+<td>67.2</td>
+<td>53.4</td>
+</tr>
+<tr>
+<td>10V</td>
+<td>11.7</td>
+<td>6.93</td>
+<td>54.6</td>
+<td>62.8</td>
+</tr>
+</tbody>
+</table><p>You can see the frequency <strong>drops significantly</strong> as you increase the duty cycle — by over <strong>25%</strong> from 6V to 10V on the control pin!</p>
+<hr>
+<h2 id="why-this-is-a-problem">4. Why This is a Problem</h2>
+<p>If you’re trying to make a <strong>PWM signal</strong> to drive:</p>
+<ul>
+<li>Motors</li>
+<li>LEDs</li>
+<li>Audio tones</li>
+<li>Communication signals</li>
+</ul>
+<p>Then <strong>a stable frequency is essential</strong>. Changing frequency can cause:</p>
+<ul>
+<li>Motor instability or noise</li>
+<li>Visible flicker in LEDs</li>
+<li>Distorted or jittery audio</li>
+<li>Errors in digital circuits</li>
+</ul>
+<hr>
+<h2 id="better-alternatives">5. Better Alternatives</h2>
+<p>To get <strong>constant-frequency PWM</strong>, consider:</p>
+<ul>
+<li>A <strong>dedicated PWM chip</strong> (e.g., SG3525, TL494)</li>
+<li>A <strong>microcontroller</strong> (with timer-based PWM)</li>
+<li>A modified 555 design using:
+<ul>
+<li><strong>constant current charging</strong> of the capacitor</li>
+<li><strong>external comparator + ramp generator</strong></li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2 id="conclusion">Conclusion</h2>
+<p>The 555 timer is a wonderful tool — but it has its limitations. While the <strong>control voltage</strong> offers an easy way to adjust duty cycle, it comes at the cost of <strong>frequency stability</strong>. So if your application demands <strong>fixed-frequency PWM</strong>, the 555 in simple astable mode <strong>isn’t the right choice</strong>.</p>
+<p>Instead, reach for more stable alternatives when frequency matters.</p>
+<hr>
+<p><em>Author: Your Name</em><br>
+<em>Date: May 2025</em></p>
+</div>
+</body>
+
+</html>
